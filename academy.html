@@ -8,17 +8,17 @@
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230A2543'/%3E%3Ccircle cx='32' cy='18' r='6' fill='%23DE9F2E'/%3E%3Ccircle cx='32' cy='32' r='6' fill='%2313877E'/%3E%3Ccircle cx='32' cy='46' r='6' fill='%23F5F2EB'/%3E%3C/svg%3E" />
   <title>Songdel Academy — Songdel HealthWorks</title>
   <meta name="description" content="The Songdel Academy is a six-week, 240-hour training program that prepares Ghana-based healthcare professionals for U.S. practice workflows, with gated certification Levels I–III." />
-  <link rel="canonical" href="https://songdel-healthworks-mshdbjz24-joshs-projects-a2e4decb.vercel.app/academy.html" />
+  <link rel="canonical" href="https://songdel-healthworks.vercel.app/academy.html" />
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="Songdel HealthWorks" />
   <meta property="og:title" content="Songdel Academy — Trained in Ghana. Ready for U.S. practice." />
   <meta property="og:description" content="A six-week intensive: HIPAA gates, U.S. healthcare, cardiology, eClinicalWorks, operations simulation, and a supervised practicum — then certification." />
-  <meta property="og:url" content="https://songdel-healthworks-mshdbjz24-joshs-projects-a2e4decb.vercel.app/academy.html" />
-  <meta property="og:image" content="https://songdel-healthworks-mshdbjz24-joshs-projects-a2e4decb.vercel.app/og-image.png" />
+  <meta property="og:url" content="https://songdel-healthworks.vercel.app/academy.html" />
+  <meta property="og:image" content="https://songdel-healthworks.vercel.app/og-image.png" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Songdel Academy — Trained in Ghana. Ready for U.S. practice." />
   <meta name="twitter:description" content="A six-week intensive with gated certification Levels I–III for Ghana-based healthcare professionals." />
-  <meta name="twitter:image" content="https://songdel-healthworks-mshdbjz24-joshs-projects-a2e4decb.vercel.app/og-image.png" />
+  <meta name="twitter:image" content="https://songdel-healthworks.vercel.app/og-image.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -339,7 +339,7 @@
         <a href="index.html#process">Process</a>
         <a href="index.html#security">Security</a>
         <a href="index.html#questions">FAQ</a>
-        <a class="nav-cta" href="#apply">Apply to the Academy</a>
+        <a class="nav-cta" href="apply.html">Apply to the Academy</a>
       </nav>
     </div>
   </header>
@@ -435,23 +435,8 @@
       <p class="eyebrow">Apply</p>
       <h2 style="font-size: clamp(2.4rem, 5vw, 4.6rem); line-height: .98; margin-bottom: 18px">Join the next cohort.</h2>
       <p class="contact-intro">The Academy is built for healthcare people in Ghana — nurses, midwives, physicians, health administrators, records and allied-health professionals — who want to support U.S. practices to a serious standard. Training is full-time and intensive for six weeks.</p>
-      <form class="lead-form" id="apply-form" style="margin-top: 34px">
-        <div class="form-grid">
-          <div class="field"><label for="af-name">Full name *</label><input id="af-name" name="name" required autocomplete="name"></div>
-          <div class="field"><label for="af-email">Email *</label><input id="af-email" name="email" type="email" required autocomplete="email"></div>
-          <div class="field"><label for="af-phone">Phone / WhatsApp *</label><input id="af-phone" name="phone" type="tel" required autocomplete="tel"></div>
-          <div class="field"><label for="af-location">Location (city, Ghana) *</label><input id="af-location" name="location" required></div>
-          <div class="field"><label for="af-bg">Healthcare background</label><select id="af-bg" name="background"><option>Nurse / Midwife</option><option>Physician</option><option>Health administration / records</option><option>Allied health</option><option>Other healthcare</option></select></div>
-          <div class="field"><label for="af-exp">Years of experience</label><select id="af-exp" name="experience"><option>0–1</option><option>2–4</option><option>5–9</option><option>10+</option></select></div>
-          <div class="field full"><label for="af-ehr">EHR / computer experience</label><input id="af-ehr" name="ehr" placeholder="e.g. eClinicalWorks, Epic, other systems, or general computer skills"></div>
-          <div class="field full"><label for="af-why">Why Songdel? *</label><textarea id="af-why" name="why" required placeholder="A few sentences about your background and why you want to train with the Academy."></textarea></div>
-        </div>
-        <div class="form-actions">
-          <button class="button primary" type="submit">Apply via WhatsApp</button>
-          <button class="button secondary" type="button" id="apply-email">Apply via email instead</button>
-        </div>
-        <p class="form-note">Your answers open in WhatsApp or your email app, ready to send — nothing is stored on this website. Applying does not guarantee a cohort place; shortlisted candidates are contacted for the next stage.</p>
-      </form>
+      <div class="academy-cta"><a class="button light" href="apply.html">Start your application</a></div>
+      <p class="form-note" style="margin-top: 18px">Applying does not guarantee a cohort place; shortlisted candidates are contacted for the next stage.</p>
     </div>
   </section>
 
@@ -474,28 +459,5 @@
     <p class="footer-note">© 2026 Songdel HealthWorks<br>Healthcare workforce &amp; managed services</p>
   </div>
 </footer>
-<script>
-  function leadMessage(form, title) {
-    const lines = [title, ''];
-    new FormData(form).forEach((v, k) => { if (String(v).trim()) lines.push(k + ': ' + v); });
-    return lines.join('\n');
-  }
-  function wireLeadForm(formId, emailBtnId, title, subject) {
-    const form = document.getElementById(formId);
-    if (!form) return;
-    form.addEventListener('submit', e => {
-      e.preventDefault();
-      const msg = leadMessage(form, title);
-      window.open('https://wa.me/14438501407?text=' + encodeURIComponent(msg), '_blank');
-    });
-    const btn = document.getElementById(emailBtnId);
-    if (btn) btn.addEventListener('click', () => {
-      if (!form.reportValidity()) return;
-      const msg = leadMessage(form, title);
-      location.href = 'mailto:info@pulsepointheart.com?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(msg);
-    });
-  }
-  wireLeadForm('apply-form', 'apply-email', 'Songdel Academy — application', 'Songdel Academy application');
-</script>
 </body>
 </html>
