@@ -342,7 +342,7 @@ function chip(status) {
 function badges(course) {
   var out = "";
   if (course.criticalGate) out += '<span class="badge badge-gate">★ Critical gate</span>';
-  out += '<span class="badge badge-pass">Pass mark ' + course.passPercent + "%</span>";
+  out += '<span class="badge badge-signoff">Pass standard: ' + course.passPercent + "%</span>";
   if (course.signoffRequired) out += '<span class="badge badge-signoff">Instructor sign-off required</span>';
   else out += '<span class="badge badge-signoff">Instructor sign-off</span>';
   return out;
