@@ -342,10 +342,12 @@ function chip(status) {
 function badges(course) {
   var out = "";
   if (course.criticalGate) out += '<span class="badge badge-gate">★ Critical gate</span>';
-  out += '<span class="badge badge-signoff">Pass standard: ' + course.passPercent + "%</span>";
-  if (course.signoffRequired) out += '<span class="badge badge-signoff">Instructor sign-off required</span>';
-  else out += '<span class="badge badge-signoff">Instructor sign-off</span>';
+  out += '<span class="rules-line">Pass standard: ' + course.passPercent + "% · " +
+    (course.signoffRequired ? "Instructor sign-off required" : "Instructor sign-off") + "</span>";
   return out;
+}
+function waitBadge(st) {
+  return st === "ready" ? '<span class="badge badge-wait">Awaiting assessment</span>' : "";
 }
 function dots(cls) {
   return '<span class="dots ' + (cls || "") + '" aria-hidden="true"><i class="d1"></i><i class="d2"></i><i class="d3"></i></span>';
@@ -571,7 +573,7 @@ function viewDashboard() {
         '<h2 style="font-size:1.7rem;margin-bottom:6px">' + esc(cur.code) + " — " + esc(cur.title) + "</h2>" +
         '<p class="small" style="margin:0 0 6px">Course ' + cur.sequence + " of 16 · Pass mark " + cur.passPercent + "% · " +
           unitsDoneCount(cur.code) + " of 5 units complete</p>" +
-        '<div class="flexrow" style="margin-bottom:14px">' + chip(st) + badges(cur) + "</div>" +
+        '<div class="flexrow" style="margin-bottom:14px">' + chip(st) + waitBadge(st) + badges(cur) + "</div>" +
         action + ' <a class="btn btn-ghost" href="#/course/' + cur.code + '">Course details</a></div>';
   }
 
@@ -619,7 +621,7 @@ function viewPath() {
       '</div><div class="path-line"></div></div>' +
       '<div class="path-card' + (st === "locked" ? " locked" : "") + '">' +
         '<div class="path-card-head"><h3><span class="code">' + esc(c.code) + "</span>" + esc(c.title) + "</h3>" + chip(st) + "</div>" +
-        '<div class="path-meta">' + badges(c) + "</div>" + lockNote +
+        '<div class="path-meta">' + waitBadge(st) + badges(c) + "</div>" + lockNote +
         '<div class="path-foot"><div class="pbar thin"><i style="width:' + pctU + '%"></i></div>' +
         '<span class="units-done">' + done + " / 5 units</span>" + action + "</div>" +
       "</div></div>";
@@ -669,9 +671,9 @@ function viewCourse(code) {
       (dec && dec.note ? "Instructor note: \u201C" + esc(dec.note) + "\u201D<br>" : "") +
       "Retest: redo <b>Unit 5</b> above, then this course returns to \u201CReady for final assessment\u201D for a new sign-off decision.</p></div>";
   } else if (st === "ready") {
-    assess = '<div class="notice"><p><strong>Ready for final assessment.</strong> All 5 units are complete. ' +
+    assess = '<div class="notice"><p><strong>Awaiting assessment — question bank not yet loaded.</strong> All 5 units are complete and saved. ' +
       "The final assessment for this course is a 20-item test drawn from the Academy\u2019s controlled question bank (pass mark " + c.passPercent + "%). " +
-      "That question bank has not been loaded into the platform yet, so no test can be taken and no score is recorded here. " +
+      "The question bank has not been loaded into the platform yet, so the test cannot be taken yet and no score is recorded here. " +
       (c.signoffRequired
         ? "This course also requires instructor sign-off of the practical competency. An instructor records the sign-off from the Instructor view."
         : "An instructor records the sign-off decision from the Instructor view.") +

@@ -126,6 +126,8 @@ button{font-family:inherit;cursor:pointer}
 .badge-gate{background:var(--navy);color:var(--gold)}
 .badge-signoff{background:var(--gold-soft);color:#8a5f10;border:1px solid rgba(222,159,46,.5)}
 .badge-pass{background:rgba(19,135,126,.1);color:var(--teal-dark);border:1px solid rgba(19,135,126,.35)}
+.badge-wait{background:#fdf3e0;color:#8a5f10;border:1px solid rgba(222,159,46,.55)}
+.rules-line{color:var(--muted);font-size:.85rem}
 
 /* ---------- Learning path ---------- */
 .path-list{display:flex;flex-direction:column;gap:0}
@@ -158,6 +160,11 @@ button{font-family:inherit;cursor:pointer}
 .unit-info{flex:1;min-width:180px}
 .unit-info b{color:var(--navy);display:block;font-size:1rem}
 .unit-info span{color:var(--muted);font-size:.84rem}
+@media (max-width:640px){
+  .unit-row{flex-wrap:wrap;gap:10px 14px;padding:14px}
+  .unit-info{flex:1 1 calc(100% - 60px);min-width:0}
+  .unit-row>.chip,.unit-row>.btn{margin-left:56px}
+}
 .notice{border-left:4px solid var(--gold);background:var(--gold-soft);padding:16px 20px;border-radius:0 12px 12px 0;margin:20px 0}
 .notice.teal{border-color:var(--teal);background:rgba(19,135,126,.07)}
 .notice.danger{border-color:var(--danger);background:var(--danger-soft)}
