@@ -1,0 +1,28 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function isSelf(uid) { return signedIn() && request.auth.uid == uid; }
+    function isInstructor() {
+      return signedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['instructor', 'admin'];
+    }
+    match /users/{uid} {
+      allow read: if isSelf(uid) || isInstructor();
+      // Instructor lock (2026-11-08): a client-created profile is always a
+      // learner. Instructor/admin roles are granted by hand in the console.
+      allow create: if isSelf(uid) && request.resource.data.role == 'learner';
+      allow update: if isInstructor() || (isSelf(uid) && request.resource.data.role == resource.data.role);
+      allow delete: if false;
+    }
+    match /progress/{uid} {
+      allow read: if isSelf(uid) || isInstructor();
+      allow write: if isSelf(uid);
+    }
+    match /records/{uid} {
+      allow read: if isSelf(uid) || isInstructor();
+      allow create: if isSelf(uid) || isInstructor();
+      allow update: if isInstructor() || (isSelf(uid) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['evidence']));
+      allow delete: if false;
+    }
+  }
+}
