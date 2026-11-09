@@ -435,13 +435,9 @@ function viewAuth() {
         '<input type="email" id="au-email" required autocomplete="email" placeholder="you@example.com"></div>' +
         '<div class="field"><label for="au-password">Password</label>' +
         '<input type="password" id="au-password" required autocomplete="new-password" placeholder="At least 6 characters"></div>' +
-        '<div class="field"><label>I am joining as</label><div class="rolepick">' +
-          '<label><input type="radio" name="role" value="learner" checked>Learner<small>Work through the courses</small></label>' +
-          '<label><input type="radio" name="role" value="instructor">Instructor<small>Review &amp; sign off courses</small></label>' +
-        "</div></div>" +
         '<button class="btn btn-primary" id="auth-submit" type="submit" style="width:100%;justify-content:center">Create account</button>' +
       "</form>" +
-      '<div class="preview-note">Instructor accounts are for Songdel Academy staff.</div>';
+      '<div class="preview-note">New accounts are learner accounts. Instructor access is granted by Songdel Academy staff after sign-up.</div>';
   } else {
     formHtml =
       '<form id="auth-form">' +
@@ -483,7 +479,7 @@ function viewAuth() {
 
     if (isUp) {
       var name = document.getElementById("au-name").value.trim();
-      var role = document.querySelector('input[name="role"]:checked').value;
+      var role = "learner"; // Public sign-up is learner-only; instructor is granted by staff (see INSTRUCTOR_SIGNUP_LOCK_PLAN.md)
       if (!name) { btn.disabled = false; btn.textContent = "Create account"; showError("Please enter your full name."); return; }
       provisioning = true;
       createUserWithEmailAndPassword(auth, email, password)
@@ -873,7 +869,7 @@ function viewInstructor() {
     app.innerHTML =
       '<div class="page"><div class="page-head"><p class="eyebrow">' + dots() + " Instructor</p>" +
       "<h1>Cohort progress</h1>" +
-      '<p class="lede">No learners have created accounts yet. When a trainee signs up with the Learner role, they will appear here with their full pathway progress.</p></div>' +
+      '<p class="lede">No learners have created accounts yet. When a trainee creates an account, they will appear here with their full pathway progress.</p></div>' +
       picker + "</div>";
     wireLearnerPick();
     return;
