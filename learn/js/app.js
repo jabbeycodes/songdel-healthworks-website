@@ -349,6 +349,10 @@ function badges(course) {
 function waitBadge(st) {
   return st === "ready" ? '<span class="badge badge-wait">Awaiting assessment</span>' : "";
 }
+/* Instructor preview: an instructor can open any course or unit to REVIEW the
+   material, whatever the selected learner's progression. Read-only in effect —
+   completion controls render only for learners, so previewing writes nothing. */
+function previewMode() { return !!(session && session.role === "instructor"); }
 function dots(cls) {
   return '<span class="dots ' + (cls || "") + '" aria-hidden="true"><i class="d1"></i><i class="d2"></i><i class="d3"></i></span>';
 }
@@ -611,7 +615,9 @@ function viewPath() {
     var cls = st === "passed" ? "is-passed" : st === "remediation" ? "is-remediation" :
       (currentCourse() && currentCourse().code === c.code) ? "is-current" : "";
     var dotContent = st === "passed" ? "✓" : c.sequence;
-    var action = st === "locked"
+    var action = st === "locked" && previewMode()
+      ? '<a class="btn btn-ghost btn-sm" href="#/course/' + c.code + '">Preview course</a>'
+      : st === "locked"
       ? '<span class="btn btn-ghost btn-sm disabled">🔒 Locked</span>'
       : '<a class="btn ' + (st === "passed" ? "btn-ghost" : "btn-primary") + ' btn-sm" href="#/course/' + c.code + '">' +
           (st === "passed" ? "Review course" : st === "notstarted" ? "Start course" : "Open course") + "</a>";
@@ -647,10 +653,11 @@ function viewCourse(code) {
     var doneU = unitDone(code, u.n);
     var unl = unitUnlocked(code, u.n);
     var isCurrent = unl && !doneU && (u.n === 1 || unitDone(code, u.n - 1));
-    var cls = doneU ? "done" : isCurrent ? "current" : !unl ? "locked" : "";
+    var cls = doneU ? "done" : isCurrent ? "current" : !unl && !previewMode() ? "locked" : "";
     var right;
     if (doneU) right = '<span class="chip st-passed">Complete</span> <a class="btn btn-ghost btn-sm" href="#/lesson/' + code + "/" + u.n + '">Review</a>';
     else if (unl) right = '<a class="btn btn-primary btn-sm" href="#/lesson/' + code + "/" + u.n + '">' + (u.n === 1 && unitsDoneCount(code) === 0 ? "Start unit" : "Continue") + "</a>";
+    else if (previewMode()) right = '<span class="chip st-locked">🔒 Locked for learners</span> <a class="btn btn-ghost btn-sm" href="#/lesson/' + code + "/" + u.n + '">Preview</a>';
     else right = '<span class="chip st-locked">🔒 Locked</span>';
     return '<div class="unit-row ' + cls + '"><div class="unit-num">' + (doneU ? "✓" : u.n) + "</div>" +
       '<div class="unit-info"><b>Unit ' + u.n + ": " + esc(u.title) + "</b>" +
@@ -722,13 +729,16 @@ function viewCourse(code) {
       evList + "</div>";
   }
 
+  var previewNote = previewMode()
+    ? '<div class="notice teal"><p><strong>Instructor preview.</strong> You can open every unit in this course to review the material, whatever the selected learner\u2019s progress. Previewing never changes anyone\u2019s progress.</p></div>'
+    : "";
   app.innerHTML =
     '<div class="page">' +
       '<p class="crumb small" style="margin-bottom:14px"><a href="#/path">← Learning path</a> · Course ' + c.sequence + " of 16</p>" +
       '<div class="page-head"><p class="eyebrow">' + dots() + " " + esc(c.code) + "</p>" +
       "<h1>" + esc(c.title) + "</h1>" +
       '<div class="flexrow" style="margin-top:14px">' + chip(st) + badges(c) + "</div></div>" +
-      noteHtml + assess + ecwPanel +
+      noteHtml + assess + previewNote + ecwPanel +
       '<h2 style="font-size:1.4rem;margin:26px 0 14px">Units</h2>' +
       '<div class="unit-list">' + unitRows + "</div>" +
       '<p class="small mt">Units complete in order — the next unit unlocks when the previous one is marked complete in the lesson player.</p>' +
@@ -773,7 +783,9 @@ function viewLesson(code, n) {
   chrome("path");
   var u = c.units[n - 1];
   var doneU = unitDone(code, n);
-  var unl = unitUnlocked(code, n);
+  var rawUnl = unitUnlocked(code, n);
+  var unl = rawUnl || previewMode();
+  var previewing = previewMode() && !rawUnl;
 
   if (!unl) {
     app.innerHTML =
@@ -788,7 +800,7 @@ function viewLesson(code, n) {
   var prevBtn = n > 1
     ? '<a class="btn btn-ghost" href="#/lesson/' + code + "/" + (n - 1) + '">← Unit ' + (n - 1) + "</a>"
     : '<span class="btn btn-ghost disabled">← Unit 1</span>';
-  var nextUnlocked = n < 5 && unitUnlocked(code, n + 1);
+  var nextUnlocked = n < 5 && (unitUnlocked(code, n + 1) || previewMode());
   var nextBtn;
   if (n === 5) {
     nextBtn = '<a class="btn btn-ghost" href="#/course/' + code + '">Back to course →</a>';
@@ -811,6 +823,7 @@ function viewLesson(code, n) {
       '<div class="player-bar"><div><p class="crumb" style="margin:0"><a href="#/course/' + code + '">' + esc(code) + " — " + esc(c.title) + "</a> · Unit " + n + " of 5</p>" +
       '<h1 style="font-size:1.65rem;margin-top:4px">' + esc(u.title) + "</h1></div>" +
       '<span class="spacer" style="flex:1"></span>' + chip(doneU ? "passed" : "progress") + "</div>" +
+      (previewing ? '<div class="notice teal"><p><strong>Instructor preview.</strong> This unit is locked for learners at this point in their progression — you are viewing it to review the material. Nothing here changes any learner\u2019s progress.</p></div>' : "") +
       '<div class="player-frame-wrap"><iframe class="player-frame" src="' + esc(u.file) + '" title="' + esc(code) + " Unit " + n + ": " + esc(u.title) + '"></iframe></div>' +
       '<div class="player-actions">' + prevBtn + nextBtn + '<span class="spacer"></span>' + completeBtn + "</div>" +
       (doneU && n === 5 && courseStatus(code) === "ready"
