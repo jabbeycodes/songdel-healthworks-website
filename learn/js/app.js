@@ -59,7 +59,7 @@ var loadedUid = null;
 
 function emptyDataset() {
   return {
-    units: {}, decisions: {}, history: [],
+    units: {}, decisions: {}, history: [], exams: {},
     ehrAccess: { approved: false, by: null, at: null },
     evidence: []
   };
@@ -71,6 +71,7 @@ function datasetFromRaw(raw) {
   if (!raw) return ds;
   var progress = raw.progress || {};
   (progress.completedUnits || []).forEach(function (k) { ds.units[k] = { done: true }; });
+  ds.exams = progress.examAttempts || {};
   var records = raw.records || {};
   var cs = records.courseStatus || {};
   Object.keys(cs).forEach(function (code) { ds.decisions[code] = cs[code]; });
@@ -217,6 +218,16 @@ function courseStatus(code) {
   if (done === 5) return "ready";
   if (done > 0) return "progress";
   return "notstarted";
+}
+
+function examBank(code) { return (typeof EXAMS !== "undefined" && EXAMS[code]) || null; }
+function examAttempts(code) { return DS.exams[code] || []; }
+function latestExam(code) { var a = examAttempts(code); return a.length ? a[a.length - 1] : null; }
+function examPassed(code) { var l = latestExam(code); return !!(l && l.passed); }
+function examSummaryLine(code) {
+  var l = latestExam(code), n = examAttempts(code).length;
+  if (!l) return "Final assessment: not taken yet.";
+  return "Final assessment: " + (l.passed ? "\u2713 passed" : "not passed") + " \u2014 latest score " + l.pct + "% (" + l.score + "/" + l.total + ") on " + fmtDate(l.at) + (n > 1 ? " \u00b7 " + n + " attempts" : "") + ".";
 }
 function isUnlocked(code) {
   var c = courseByCode(code);
@@ -678,17 +689,24 @@ function viewCourse(code) {
       (dec && dec.note ? "Instructor note: \u201C" + esc(dec.note) + "\u201D<br>" : "") +
       "Retest: redo <b>Unit 5</b> above, then this course returns to \u201CReady for final assessment\u201D for a new sign-off decision.</p></div>";
   } else if (st === "ready") {
-    assess = '<div class="notice"><p><strong>Awaiting assessment — question bank not yet loaded.</strong> All 5 units are complete and saved. ' +
-      "The final assessment for this course is a 20-item test drawn from the Academy\u2019s controlled question bank (pass mark " + c.passPercent + "%). " +
-      "The question bank has not been loaded into the platform yet, so the test cannot be taken yet and no score is recorded here. " +
-      (c.signoffRequired
-        ? "This course also requires instructor sign-off of the practical competency. An instructor records the sign-off from the Instructor view."
-        : "An instructor records the sign-off decision from the Instructor view.") +
-      "</p></div>";
+    var ex = latestExam(code);
+    var exHtml;
+    if (ex && ex.passed) {
+      exHtml = "<strong>\u2713 Final assessment passed.</strong> Scored " + ex.pct + "% (" + ex.score + "/" + ex.total + ") on " + fmtDate(ex.at) + " \u2014 pass mark " + c.passPercent + "%. " +
+        "The remaining step is the instructor sign-off, recorded from the Instructor view.";
+    } else if (ex) {
+      exHtml = "<strong>Final assessment \u2014 last attempt " + ex.pct + "%</strong> on " + fmtDate(ex.at) + ", below the " + c.passPercent + "% pass mark. Review the lessons and retake the exam; passing it completes the assessment leg, then an instructor sign-off records the course as Passed.";
+    } else {
+      exHtml = "<strong>Ready for final assessment.</strong> All 5 units are complete. The final assessment is a 10-question exam from the Academy\u2019s question bank (pass mark " + c.passPercent + "%). Passing it completes the assessment leg; an instructor sign-off then records the course as Passed.";
+    }
+    var examBtn = isLearner
+      ? '<div class="queue-actions"><a class="btn btn-primary" href="#/exam/' + code + '">' + (ex && ex.passed ? "Review my exam result" : ex ? "Retake the final assessment" : "Take the final assessment") + "</a></div>"
+      : '<div class="queue-actions"><a class="btn btn-ghost" href="#/exam/' + code + '">Review the exam questions &amp; key</a></div>';
+    assess = '<div class="notice"><p>' + exHtml + "</p>" + examBtn + "</div>";
   } else if (locked) {
     assess = '<div class="notice"><p><strong>Locked.</strong> This course unlocks when ' + esc(c.prerequisite) + " is signed off as Passed.</p></div>";
   } else {
-    assess = '<div class="notice"><p><strong>Final assessment:</strong> a 20-item test from the controlled question bank (pass mark ' + c.passPercent + "%), taken after all 5 units are complete. The question bank is not loaded yet, so completing the units will move this course to \u201CReady for final assessment\u201D rather than Passed.</p></div>";
+    assess = '<div class="notice"><p><strong>Final assessment:</strong> a 10-question exam from the Academy\u2019s question bank (pass mark ' + c.passPercent + "%), taken after all 5 units are complete. Completing the units moves this course to \u201CReady for final assessment\u201D.</p></div>";
   }
 
   var ecwPanel = "";
@@ -854,6 +872,117 @@ function viewLesson(code, n) {
   }
 }
 
+/* ---------------- final assessment ----------------
+   Bank: js/exams.js (Corrected Exams v1.1 — 10 questions per course).
+   Attempts live on the learner's progress doc (examAttempts), which only
+   the learner writes; instructors read the same doc in the cohort view.
+   A passing score completes the assessment leg only — the instructor
+   sign-off remains the pass authority for the course. */
+
+var examFormFor = null; // course code whose attempt form is open
+
+function examReviewHtml(code, attempt) {
+  return examBank(code).map(function (q, i) {
+    var chosen = attempt ? attempt.answers[i] : null;
+    var rows = q.opts.map(function (o, j) {
+      var tag = j === q.answer ? " \u2713" : (attempt && j === chosen ? " \u2717" : "");
+      var bold = j === q.answer ? ' style="font-weight:600"' : "";
+      return '<p class="small" style="margin:2px 0 2px 18px"><span' + bold + ">" + "ABCD"[j] + ". " + esc(o) + tag + "</span></p>";
+    }).join("");
+    var chipHtml = "";
+    if (attempt) chipHtml = chosen === q.answer ? ' <span class="chip st-passed">Correct</span>' : ' <span class="chip st-remediation">Missed</span>';
+    return '<div class="card mb" style="padding:16px 20px"><p style="margin:0 0 6px"><b>Q' + (i + 1) + ".</b> " + esc(q.q) + chipHtml + "</p>" + rows +
+      '<p class="small" style="margin:8px 0 0"><b>Why:</b> ' + esc(q.why) + "</p></div>";
+  }).join("");
+}
+
+function viewExam(code) {
+  var c = courseByCode(code);
+  if (!c) { location.hash = "#/path"; return; }
+  chrome("path");
+  var bank = examBank(code);
+  var head = '<div class="page"><div class="page-head"><p class="eyebrow">' + dots() + " Final assessment</p>" +
+    "<h1>" + esc(code) + " \u2014 " + esc(c.title) + "</h1>";
+  var back = '<p><a class="btn btn-ghost" href="#/course/' + code + '">\u2190 Back to the course</a></p>';
+  if (!bank) {
+    app.innerHTML = head + '<p class="lede">The question bank for this course is not loaded.</p></div>' +
+      '<div class="notice"><p>The final assessment cannot be taken yet.</p></div></div>';
+    window.scrollTo(0, 0); return;
+  }
+  if (session.role !== "learner") {
+    app.innerHTML = head + '<p class="lede">Instructor review \u2014 the full question bank with the answer key and explanations. Learners never see the key; after an attempt they see their own result and the same explanations.</p></div>' +
+      examReviewHtml(code, null) + back + "</div>";
+    window.scrollTo(0, 0); return;
+  }
+  var latest = latestExam(code);
+  if (courseStatus(code) === "passed") {
+    app.innerHTML = head + '<p class="lede">This course is already signed off as Passed.</p></div>' +
+      (latest ? '<div class="notice teal"><p>' + examSummaryLine(code) + "</p></div>" + examReviewHtml(code, latest) : "") + back + "</div>";
+    window.scrollTo(0, 0); return;
+  }
+  if (unitsDoneCount(code) < 5) {
+    app.innerHTML = head + '<p class="lede">The final assessment opens when all 5 units are complete.</p></div>' +
+      '<div class="notice"><p>You have completed ' + unitsDoneCount(code) + ' of 5 units in this course. Finish the remaining units first, then come back for the exam.</p></div>' + back + "</div>";
+    window.scrollTo(0, 0); return;
+  }
+  if (latest && latest.passed) {
+    app.innerHTML = head + '<p class="lede">Assessment complete.</p></div>' +
+      '<div class="notice teal"><p><strong>\u2713 You passed the final assessment</strong> \u2014 ' + examSummaryLine(code) + " The remaining step is your instructor\u2019s sign-off, which records the course as Passed.</p></div>" +
+      examReviewHtml(code, latest) + back + "</div>";
+    window.scrollTo(0, 0); return;
+  }
+  if (latest && examFormFor !== code) {
+    app.innerHTML = head + '<p class="lede">Assessment not yet passed.</p></div>' +
+      '<div class="notice danger"><p><strong>Last attempt: ' + latest.pct + "% (" + latest.score + "/" + latest.total + ")</strong> on " + fmtDate(latest.at) + " \u2014 the pass mark is " + c.passPercent + "%. Review your answers below, revisit the lessons if you need to, then retake the exam.</p></div>" +
+      examReviewHtml(code, latest) +
+      '<p><button class="btn btn-primary" id="btn-retake" type="button">Retake the final assessment</button></p>' + back + "</div>";
+    document.getElementById("btn-retake").addEventListener("click", function () { examFormFor = code; viewExam(code); });
+    window.scrollTo(0, 0); return;
+  }
+  var qs = bank.map(function (q, i) {
+    var opts = q.opts.map(function (o, j) {
+      return '<label class="exam-opt"><input type="radio" name="q' + i + '" value="' + j + '"><span>' + "ABCD"[j] + ". " + esc(o) + "</span></label>";
+    }).join("");
+    return '<div class="card mb exam-q"><p style="margin:0 0 8px"><b>Q' + (i + 1) + ".</b> " + esc(q.q) + "</p>" + opts + "</div>";
+  }).join("");
+  app.innerHTML = head + '<p class="lede">10 questions \u00b7 pass mark ' + c.passPercent + "% \u00b7 your answers are recorded when you submit. " +
+    (c.criticalGate ? "This is a compliance-gated course: treat every scenario as if it were a real patient situation. " : "") +
+    "Passing completes the assessment leg \u2014 an instructor sign-off then records the course as Passed.</p></div>" + qs +
+    '<p><button class="btn btn-primary" id="btn-grade" type="button">Submit answers</button></p>' + back + "</div>";
+  document.getElementById("btn-grade").addEventListener("click", function () { gradeExam(code); });
+  window.scrollTo(0, 0);
+}
+
+function gradeExam(code) {
+  var c = courseByCode(code), bank = examBank(code);
+  var answers = [], missing = 0;
+  bank.forEach(function (q, i) {
+    var sel = document.querySelector('input[name="q' + i + '"]:checked');
+    answers.push(sel ? parseInt(sel.value, 10) : null);
+    if (!sel) missing++;
+  });
+  if (missing > 0) { alert("Please answer all 10 questions \u2014 " + missing + " still blank."); return; }
+  var score = 0;
+  bank.forEach(function (q, i) { if (answers[i] === q.answer) score++; });
+  var pct = Math.round((score / bank.length) * 100);
+  var attempt = { at: new Date().toISOString(), score: score, total: bank.length, pct: pct, passed: pct >= c.passPercent, answers: answers };
+  var btn = document.getElementById("btn-grade");
+  btn.disabled = true; btn.textContent = "Saving\u2026";
+  if (!myRaw.progress) myRaw.progress = { completedUnits: [] };
+  if (!myRaw.progress.examAttempts) myRaw.progress.examAttempts = {};
+  var arr = (myRaw.progress.examAttempts[code] || []).concat([attempt]);
+  var patch = {}; patch["examAttempts." + code] = arr;
+  updateDoc(progressRef(session.uid), patch).then(function () {
+    myRaw.progress.examAttempts[code] = arr;
+    DS.exams[code] = arr;
+    examFormFor = null;
+    viewExam(code);
+  }).catch(function () {
+    btn.disabled = false; btn.textContent = "Submit answers";
+    alert("Your score could not be saved \u2014 check your connection and submit again.");
+  });
+}
+
 /* ---------------- instructor view ---------------- */
 
 function viewInstructor() {
@@ -903,6 +1032,7 @@ function viewInstructor() {
           '<span class="small">All 5 units complete · Pass standard ' + c.passPercent + "% · " +
             (c.signoffRequired ? "Instructor sign-off required by curriculum" : "Instructor sign-off (curriculum: as needed)") + "</span></div>" +
           chip("ready") + "</div>" +
+          '<p class="small" style="margin:8px 0 0">' + examSummaryLine(c.code) + "</p>" +
           '<label class="checkline"><input type="checkbox" id="crit-' + c.code + '"><span><b>Critical error</b> — a critical privacy, security, or patient-safety error was observed. This forces remediation regardless of any score.</span></label>' +
           '<div class="queue-actions"><textarea id="note-' + c.code + '" placeholder="Decision note (optional) — rubric: accuracy · closed-loop work · communication · escalation · privacy/security"></textarea></div>' +
           '<div class="queue-actions">' +
@@ -1096,6 +1226,7 @@ function render() {
   if (parts[0] === "path") viewPath();
   else if (parts[0] === "course" && parts[1]) viewCourse(parts[1]);
   else if (parts[0] === "lesson" && parts[1] && parts[2]) viewLesson(parts[1], parts[2]);
+  else if (parts[0] === "exam" && parts[1]) viewExam(parts[1]);
   else if (parts[0] === "instructor") viewInstructor();
   else if (session.role === "instructor" && (hash === "#/" || hash === "#" || hash === "")) viewInstructor();
   else viewDashboard();
